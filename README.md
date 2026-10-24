@@ -112,14 +112,3 @@ Running `python cli.py` opens a menu:
 
 Each option prompts for the information it needs (identifier type, field
 values, etc.) and prints the API's response.
-
-## Notes
-
-- Inventory is stored in memory (a Python list), so it resets every time
-  `app.py` restarts. There's no persistent database in this version.
-- Barcodes are stored as given (as strings where they contain leading
-  zeros) to avoid data loss — e.g. `06792208` is not the same barcode as
-  `6792208`.
-- Each item gets an auto-incrementing `id` separate from its barcode, so
-  items can always be looked up even if two products somehow share a
-  barcode value.
