@@ -14,10 +14,11 @@ def list_inventory():
         print("Inventory is empty.")
         return
 
-    print(f"\n{'Barcode':<16}{'Name':<25}{'Brand':<20}{'Weight':<10}")
-    print("-" * 71)
+    print(f"\n{'ID':<6}{'Barcode':<16}{'Name':<25}{'Brand':<20}{'Weight':<10}")
+    print("-" * 77)
     for item in inventory:
         print(
+            f"{str(item['id']):<6}"
             f"{str(item['barcode']):<16}"
             f"{str(item['name']):<25}"
             f"{str(item['brand']):<20}"
@@ -25,15 +26,25 @@ def list_inventory():
         )
 
 
-def find_item():
-    choice = input("Search by (b)arcode or (n)ame? ").strip().lower()
-    params = {}
+def prompt_for_identifier():
+    """Ask the user how they want to identify an item and return the
+    {id|barcode|name: value} dict to send as query params, or None if
+    the user made an invalid choice."""
+    choice = input("Identify item by (i)d, (b)arcode, or (n)ame? ").strip().lower()
+    if choice == "i":
+        return {"id": input("Enter id: ").strip()}
     if choice == "b":
-        params["barcode"] = input("Enter barcode: ").strip()
-    elif choice == "n":
-        params["name"] = input("Enter product name: ").strip()
-    else:
-        print("Invalid choice.")
+        return {"barcode": input("Enter barcode: ").strip()}
+    if choice == "n":
+        return {"name": input("Enter product name: ").strip()}
+
+    print("Invalid choice.")
+    return None
+
+
+def find_item():
+    params = prompt_for_identifier()
+    if params is None:
         return
 
     response = requests.get(f"{BASE_URL}/get", params=params)
@@ -65,14 +76,8 @@ def add_item():
 
 
 def update_item():
-    choice = input("Identify item by (b)arcode or (n)ame? ").strip().lower()
-    params = {}
-    if choice == "b":
-        params["barcode"] = input("Enter barcode: ").strip()
-    elif choice == "n":
-        params["name"] = input("Enter product name: ").strip()
-    else:
-        print("Invalid choice.")
+    params = prompt_for_identifier()
+    if params is None:
         return
 
     changes = {}
@@ -101,21 +106,15 @@ def update_item():
 
 
 def delete_item():
-    choice = input("Identify item by (b)arcode or (n)ame? ").strip().lower()
-    params = {}
-    if choice == "b":
-        params["barcode"] = input("Enter barcode: ").strip()
-    elif choice == "n":
-        params["name"] = input("Enter product name: ").strip()
-    else:
-        print("Invalid choice.")
+    params = prompt_for_identifier()
+    if params is None:
         return
 
     response = requests.delete(f"{BASE_URL}/delete", params=params)
     data = response.json()
 
     if response.status_code == 200:
-        print(f"Deleted item with barcode {data['barcode']}")
+        print(f"Deleted item id {data.get('id')} (barcode {data['barcode']})")
     else:
         print(f"Error: {data.get('error', 'Unknown error')}")
 
@@ -124,7 +123,7 @@ def main_menu():
     menu = """
 === Inventory Management CLI ===
 1. List all inventory
-2. Find item (local or OpenFoodFacts by barcode)
+2. Find item (by id, barcode, or name; falls back to OpenFoodFacts by barcode)
 3. Add new item
 4. Update item
 5. Delete item
