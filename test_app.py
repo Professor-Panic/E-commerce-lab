@@ -15,10 +15,8 @@ def client():
     app_module.items.clear()
     Item._next_id = 1
     app_module.items.append(
-        Item(3017624010701, "Nutella", "Ferrero, test", "400.0g"),
-        Item(06792208,"Coca-Cola","Coca-Cola","500ml")
+        Item(3017624010701, "Nutella", "Ferrero, test", "400.0g")
     )
-
     with app.test_client() as test_client:
         yield test_client
 
