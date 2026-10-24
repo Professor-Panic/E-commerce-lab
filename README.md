@@ -28,8 +28,8 @@ OpenFoodFacts integration for looking up product details by barcode.
 ### 1. Clone and enter the project
 
 ```bash
-git clone <your-repo-url>
-cd <your-repo-folder>
+git clone <https://github.com/Professor-Panic/E-commerce-lab.git>
+cd <E-commerce-lab>
 ```
 
 ### 2. Install dependencies
