@@ -5,18 +5,31 @@ app = Flask(__name__)
 
 
 class Item:
-    def __init__(self, barcode, name, brand, item_weight):
+    _next_id = 1  # simple auto-incrementing id counter shared by all items
+
+    def __init__(self, barcode, name, brand, item_weight, item_id=None):
+        if item_id is None:
+            item_id = Item._next_id
+            Item._next_id += 1
+        else:
+            # keep the counter ahead of any manually-assigned id
+            Item._next_id = max(Item._next_id, item_id + 1)
+
+        self.id = item_id
         self.barcode = barcode
         self.name = name
         self.brand = brand
         self.weight = item_weight
 
 
-items = [Item(3017624010701, "Nutella", "Ferrero, test", "400.0g")]
+items = [Item(3017624010701, "Nutella", "Ferrero, test", "400.0g"),
+         Item("06792208","Coca-Cola","Coca-Cola","500ml")]
 
 
-def find_item(barcode=None, name=None):
-    """Look up an item in local inventory by barcode or name."""
+def find_item(item_id=None, barcode=None, name=None):
+    """Look up an item in local inventory by id, barcode, or name."""
+    if item_id is not None:
+        return next((i for i in items if str(i.id) == str(item_id)), None)
     if barcode:
         return next((i for i in items if str(i.barcode) == str(barcode)), None)
     if name:
@@ -25,18 +38,20 @@ def find_item(barcode=None, name=None):
 
 
 def get_item_data():
-    """Pull barcode/name from query args and look the item up."""
+    """Pull id/barcode/name from query args and look the item up."""
+    item_id = request.args.get("id")
     barcode = request.args.get("barcode")
     name = request.args.get("name")
 
-    if not barcode and not name:
+    if not item_id and not barcode and not name:
         return None
 
-    return find_item(barcode=barcode, name=name)
+    return find_item(item_id=item_id, barcode=barcode, name=name)
 
 
 def item_to_dict(item, status="in_house"):
     return {
+        "id": item.id,
         "barcode": item.barcode,
         "name": item.name,
         "brand": item.brand,
@@ -54,18 +69,19 @@ def get_inventory():
 
 
 # ---------------------------------------------------------------------
-# GET /get?barcode=... or ?name=...
+# GET /get?id=... or ?barcode=... or ?name=...
 #   Checks local inventory first, falls back to OpenFoodFacts by barcode
 # ---------------------------------------------------------------------
 @app.route("/get", methods=["GET"])
 def get_item():
+    item_id = request.args.get("id")
     barcode = request.args.get("barcode")
     name = request.args.get("name")
 
-    if not barcode and not name:
-        return jsonify({"error": "Provide a barcode or product name"}), 400
+    if not item_id and not barcode and not name:
+        return jsonify({"error": "Provide an id, barcode, or product name"}), 400
 
-    item = find_item(barcode=barcode, name=name)
+    item = find_item(item_id=item_id, barcode=barcode, name=name)
     if item is not None:
         return jsonify(item_to_dict(item, status="in_house")), 200
 
@@ -127,8 +143,10 @@ def add_item():
 
     return jsonify(item_to_dict(new_item)), 201
 
+
 # ---------------------------------------------------------------------
-# PATCH /update?barcode=...   (or ?name=...)
+# PATCH /update?id=...   (or ?barcode=...  or  ?name=...)
+#   body: any subset of {"name", "brand", "weight"}
 # ---------------------------------------------------------------------
 @app.route("/update", methods=["PATCH"])
 def update_item():
@@ -149,7 +167,7 @@ def update_item():
 
 
 # ---------------------------------------------------------------------
-# DELETE /delete?barcode=...   (or ?name=...)
+# DELETE /delete?id=...   (or ?barcode=...  or  ?name=...)
 # ---------------------------------------------------------------------
 @app.route("/delete", methods=["DELETE"])
 def delete_item():
@@ -158,7 +176,9 @@ def delete_item():
         return jsonify({"error": "Item not found"}), 404
 
     items.remove(item)
-    return jsonify({"message": "Item deleted", "barcode": item.barcode}), 200
+    return jsonify(
+        {"message": "Item deleted", "id": item.id, "barcode": item.barcode}
+    ), 200
 
 
 if __name__ == "__main__":
